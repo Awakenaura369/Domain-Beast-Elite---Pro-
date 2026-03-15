@@ -40,7 +40,7 @@ st.markdown("""
 # --- العنوان الرئيسي ---
 st.title("🚀 Domain Beast Elite")
 st.markdown("### الأداة الاحترافية لقنص الدومينات وفحص العلامات التجارية")
-st.info("مرحباً بك محسن! هاد النسخة مطورة خصيصاً للعمل على Streamlit و GitHub.")
+st.info("مرحباً بك محسن! هاد النسخة مصلحة ومحدثة بآخر موديلات Groq لعام 2026.")
 
 # --- السايدبار (Sidebar) للإعدادات ---
 with st.sidebar:
@@ -85,12 +85,13 @@ with tab1:
                 prompt = f"Act as a professional domain expert. Generate {num_ideas} unique, {style} domain names for: {niche}. Provide ONLY a list of names without extensions, one per line. No numbers, no dashes."
                 
                 with st.spinner("الذكاء الاصطناعي كيقلب ليك على سميات ناضية..."):
+                    # استعمال الموديل الجديد المتاح حالياً
                     completion = client.chat.completions.create(
-                        model="llama3-8b-8192",
+                        model="llama-3.1-8b-instant", 
                         messages=[{"role": "user", "content": prompt}]
                     )
                     ai_names = completion.choices[0].message.content.strip().split('\n')
-                    # تنظيف القائمة
+                    # تنظيف القائمة من الأرقام أو النقط في البداية
                     st.session_state['generated_names'] = [n.strip().split('. ')[-1].lower() for n in ai_names if n.strip()]
                     st.success(f"لقينا {len(st.session_state['generated_names'])} اقتراح!")
             except Exception as e:
@@ -106,7 +107,6 @@ with tab1:
 with tab2:
     st.subheader("فحص توفر الدومينات")
     
-    # استيراد السميات من الـ AI Tab تلقائياً إذا وجدت
     default_text = "\n".join(st.session_state.get('generated_names', []))
     manual_input = st.text_area("حط السميات هنا (سمية في كل سطر، بلا .com):", value=default_text, height=150)
     
@@ -121,16 +121,13 @@ with tab2:
             progress_bar = st.progress(0)
             total = len(names_to_check) * len(selected_exts)
             counter = 0
-
             status_text = st.empty()
             
             for name in names_to_check:
                 for ext in selected_exts:
                     target = f"{name}{ext}"
                     status_text.text(f"⏳ جاري فحص: {target}")
-                    
                     try:
-                        # فحص سريع للتوفر
                         w = whois.whois(target)
                         if not w.domain_name:
                             available = "✅ متاح"
@@ -139,7 +136,7 @@ with tab2:
                             available = "❌ محجوز"
                             expiry = w.expiration_date[0] if isinstance(w.expiration_date, list) else w.expiration_date
                     except:
-                        available = "✅ متاح" # في حالة الخطأ غالباً الدومين غير مسجل
+                        available = "✅ متاح"
                         expiry = "N/A"
 
                     final_results.append({
@@ -147,7 +144,6 @@ with tab2:
                         "Status": available,
                         "Expiry Date": expiry
                     })
-                    
                     counter += 1
                     progress_bar.progress(counter / total)
                     time.sleep(delay)
@@ -155,14 +151,11 @@ with tab2:
             status_text.empty()
             df = pd.DataFrame(final_results)
             
-            # عرض النتائج مع تلوين
             def highlight_available(val):
                 color = '#2ecc71' if val == "✅ متاح" else '#e74c3c'
                 return f'background-color: {color}; color: white; font-weight: bold'
 
             st.dataframe(df.style.applymap(highlight_available, subset=['Status']), use_container_width=True)
-            
-            # زر التحميل
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button("📥 تحميل قائمة الهموز (CSV)", csv, "beast_domains.csv", "text/csv")
 
@@ -181,25 +174,26 @@ with tab3:
             if not groq_api_key:
                 st.error("دخل API Key.")
             else:
-                client = Groq(api_key=groq_api_key)
-                tm_prompt = f"Check if the domain name '{tm_name}' could infringe on any famous global trademarks. Analyze the name and give a risk score (0-10) and why."
-                
-                with st.spinner("جاري التحليل القانوني..."):
-                    res = client.chat.completions.create(
-                        messages=[{"role": "user", "content": tm_prompt}],
-                        model="llama3-8b-8192",
-                    )
-                    st.markdown("#### نتيجة التحليل:")
-                    st.write(res.choices[0].message.content)
+                try:
+                    client = Groq(api_key=groq_api_key)
+                    tm_prompt = f"Analyze the domain name '{tm_name}' for potential trademark infringement. Is it too similar to a famous brand? Give a risk score (0-10) and reason."
+                    with st.spinner("جاري التحليل القانوني..."):
+                        # استعمال الموديل الأقوى للتحليل الدقيق
+                        res = client.chat.completions.create(
+                            messages=[{"role": "user", "content": tm_prompt}],
+                            model="llama-3.3-70b-versatile",
+                        )
+                        st.markdown("#### نتيجة التحليل:")
+                        st.write(res.choices[0].message.content)
+                except Exception as e:
+                    st.error(f"Error: {e}")
 
     with t_col2:
         st.subheader("روابط فحص رسمية")
         st.write("ضروري تشيك يدوياً هنا:")
-        st.markdown(f"- [🇺🇸 USPTO Search](https://tmsearch.uspto.gov/)")
-        st.markdown(f"- [🌍 WIPO Global Brand DB](https://www3.wipo.int/branddb/en/)")
-        st.markdown(f"- [🇪🇺 EUIPO Search](https://euipo.europa.eu/eusearch/#basic)")
-        
-        st.image("https://img.icons8.com/fluency/96/shield.png", width=100)
+        st.markdown("- [🇺🇸 USPTO Search](https://tmsearch.uspto.gov/)")
+        st.markdown("- [🌍 WIPO Global Brand DB](https://www3.wipo.int/branddb/en/)")
+        st.markdown("- [🇪🇺 EUIPO Search](https://euipo.europa.eu/eusearch/#basic)")
 
 st.markdown("---")
 st.caption("© 2026 Marketing Beast AI - Domain Hunting Module")
