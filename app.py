@@ -137,7 +137,8 @@ with tab2:
                     time.sleep(delay)
 
             df = pd.DataFrame(final_results)
-            st.dataframe(df.style.applymap(lambda x: 'color: #2ecc71' if x == '✅ متاح' else 'color: #e74c3c', subset=['Status']), use_container_width=True)
+            # تم إصلاح المشكل هنا: تغيير applymap بـ map
+            st.dataframe(df.style.map(lambda x: 'color: #2ecc71' if x == '✅ متاح' else 'color: #e74c3c', subset=['Status']), use_container_width=True)
             
             csv = df.to_csv(index=False).encode('utf-8')
             st.download_button("📥 تحميل التقرير (CSV)", csv, "beast_report.csv")
@@ -167,7 +168,6 @@ with tab4:
         if seo_domain:
             client = Groq(api_key=groq_api_key)
             with st.spinner("Analyzing SEO Metrics..."):
-                # تحليل ذكي للقيمة
                 res = client.chat.completions.create(
                     messages=[{"role": "user", "content": f"Analyze the SEO potential and brand value of '{seo_domain}'. Is it a high-value domain? Why?"}],
                     model="llama-3.3-70b-versatile"
